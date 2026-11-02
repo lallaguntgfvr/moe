@@ -29,14 +29,80 @@ export type SynthTrack = {
 };
 
 export const navigation = [
-  { id: "home", label: "/home", hint: "return to the entrance" },
-  { id: "about", label: "/about", hint: "a little about this room" },
-  { id: "journal", label: "/changelog", hint: "site notes & updates" },
-  { id: "shrine", label: "/media-shrine", hint: "games worth getting lost in" },
-  { id: "gallery", label: "/scrapbook", hint: "saved images & fragments" },
-  { id: "guestbook", label: "/guestbook", hint: "leave a tiny letter" },
-  { id: "links", label: "/neighbors", hint: "other handmade websites" },
-];
+  {
+    id: "home",
+    file: "index.html",
+    label: "/home",
+    title: "girl's secret room",
+    hint: "return to the entrance",
+    description:
+      "A handmade corner of the web. Pick a door and stay a little while.",
+  },
+  {
+    id: "about",
+    file: "about.html",
+    label: "/about",
+    title: "about this room",
+    hint: "a little about this room",
+    description:
+      "The webmaster, a small inventory, and the story of this rabbit hole.",
+  },
+  {
+    id: "journal",
+    file: "journal.html",
+    label: "/changelog",
+    title: "the change log",
+    hint: "site notes & updates",
+    description:
+      "Little changes, current obsessions, and notes from the webmaster.",
+  },
+  {
+    id: "music",
+    file: "music.html",
+    label: "/midnight-fm",
+    title: "midnight fm",
+    hint: "a little browser-synth radio",
+    description:
+      "Three original loops for your late-night wandering. Press play if you like.",
+  },
+  {
+    id: "shrine",
+    file: "shrine.html",
+    label: "/media-shrine",
+    title: "the media shrine",
+    hint: "games worth getting lost in",
+    description:
+      "Strange, tender, story-heavy worlds worth keeping on the shelf.",
+  },
+  {
+    id: "gallery",
+    file: "gallery.html",
+    label: "/scrapbook",
+    title: "the scrapbook",
+    hint: "saved images & fragments",
+    description: "Found pixels and saved fragments, lovingly collected.",
+  },
+  {
+    id: "guestbook",
+    file: "guestbook.html",
+    label: "/guestbook",
+    title: "tiny letters",
+    hint: "leave a tiny letter",
+    description:
+      "A private pocket notebook. Your letters stay in your own browser.",
+  },
+  {
+    id: "links",
+    file: "links.html",
+    label: "/neighbors",
+    title: "around the neighborhood",
+    hint: "other handmade websites",
+    description:
+      "More little doors to the handmade web, and the pixels that inspired this room.",
+  },
+] as const;
+
+export type PageId = (typeof navigation)[number]["id"];
 
 export const updates = [
   {
