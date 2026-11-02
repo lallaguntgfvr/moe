@@ -1,5 +1,3 @@
-@import "tailwindcss";
-
 @font-face {
   font-family: "AnalogueOS";
   src: url("https://humantooth.neocities.org/fonts/AnalogueOS-Regular.woff")
@@ -2521,4 +2519,34 @@ input[type="range"]::-moz-range-thumb {
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
   }
+}
+
+/* ------------------------------------------------------------------
+   plain HTML additions
+   these are the only rules added for the no-build version
+   ------------------------------------------------------------------ */
+
+[hidden] {
+  display: none !important;
+}
+
+body.menu-open {
+  overflow: hidden;
+}
+
+svg {
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+.text-button.active svg {
+  transform: rotate(180deg);
+}
+
+.home-directory a.directory-door {
+  color: inherit;
+}
+
+.gallery-item {
+  color: inherit;
 }

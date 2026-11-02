@@ -1,9 +1,2 @@
-node_modules/
-dist/
-neocities-upload/
-*.zip
-playwright-report/
-test-results/
-.checks/
 .DS_Store
 *.local

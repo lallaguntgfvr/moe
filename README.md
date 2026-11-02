@@ -1,87 +1,55 @@
 # moe moe kyun~ after dark
 
-The original violet-gray secret room, split into real, separately addressable pages. Built with React, TypeScript, Vite, and the original CSS. There is no backend, account system, or server-side routing.
+The violet-gray secret room, split into real, separately addressable pages. Plain HTML, one CSS file, and a handful of small JavaScript files. No Node.js, no npm, no build step, no frameworks.
 
-## The rooms
+## What's in here
 
-| Page             | Contents                                               |
-| ---------------- | ------------------------------------------------------ |
-| `index.html`     | Entrance, welcome message, and room directory          |
-| `about.html`     | Webmaster introduction, profile, and inventory         |
-| `journal.html`   | Changelog and currently card                           |
-| `music.html`     | Original browser-synth playlist and audio controls     |
-| `shrine.html`    | Game recommendations, genre filters, and surprise pick |
-| `gallery.html`   | Scrapbook and keyboard-accessible image viewer         |
-| `guestbook.html` | Private, browser-local notes                           |
-| `links.html`     | Neighbor buttons, inspirations, and credits            |
+| Page             | Contents                                                |
+| ---------------- | ------------------------------------------------------- |
+| `index.html`     | Entrance, welcome message, and room directory           |
+| `about.html`     | Webmaster introduction, profile, and inventory          |
+| `journal.html`   | Changelog and currently card                            |
+| `music.html`     | Original browser-synth playlist and audio controls      |
+| `shrine.html`    | Game recommendations, genre filters, and surprise pick  |
+| `gallery.html`   | Scrapbook and keyboard-accessible image viewer          |
+| `guestbook.html` | Private, browser-local notes                            |
+| `links.html`     | Neighbor buttons, inspirations, and credits             |
 
-The sidebar, footer, and previous/next links all use actual relative `.html` links. Each page has its own title and description. Display preferences, volume, and guestbook notes persist between pages on the same website. Old `index.html#about`-style bookmarks redirect to the corresponding page.
-
-## Run locally
-
-Use Node.js 22.12+ (or another version supported by Vite 7).
-
-```sh
-npm ci
-npm run dev
-```
-
-Open the local URL printed by Vite. The directory links work in development too.
-
-## Build for Neocities
-
-```sh
-npm ci
-npm run build
-```
-
-**Upload the contents of `dist/`, not the source project and not the `dist` folder itself.**
-
-Your Neocities root should contain:
+Plus:
 
 ```text
-index.html
-about.html
-journal.html
-music.html
-shrine.html
-gallery.html
-guestbook.html
-links.html
-assets/
-  *.js
-  *.css
+style.css      all of the styling
+script.js      the menu, clock, visit counter, and display settings
+js/music.js    the little Web Audio radio
+js/shrine.js   genre filters and the surprise pick
+js/gallery.js  the image viewer
+js/guestbook.js
+js/journal.js
+js/links.js
 ```
 
-You can drag these files and the `assets` folder into the Neocities dashboard. Keep `assets` alongside the HTML files. If replacing an older build, remove obsolete files from the old `assets` folder; hashed filenames change between builds. Do not delete your unrelated Neocities files.
+Every page is a complete HTML file with its own title, description, sidebar, and footer. The links between pages are ordinary relative `.html` links, so everything works on Neocities, Neocities subdirectories, and even by opening the files straight from your computer.
 
-The build checker verifies that every room exists, its local HTML assets resolve, and there are no raw TypeScript entry references or root-relative asset paths.
+## Uploading to Neocities
 
-### Why a build is needed
+Drag all of the `.html` files, `style.css`, and the whole `js` folder into your Neocities dashboard. Keep the `js` folder next to the HTML files. That's it — nothing has to be compiled or previewed locally.
 
-Neocities serves static browser files. Browsers cannot execute the project's `.tsx` / TypeScript source directly. Vite compiles React and TypeScript into ordinary JavaScript and bundles the CSS; Neocities serves those compiled files normally. You do not need Node.js running on Neocities, a paid hosting tier, a database, rewrite rules, or a single-page-app fallback.
+If you already had an older version uploaded, remove the old `assets` folder and other leftovers so they don't linger on your site.
 
-The pages use relative asset URLs, so they also work in a subdirectory. JavaScript must be enabled for the room contents and interactive features; a plain navigation directory is shown when it is disabled.
+## How it works (for editing later)
 
-To inspect exactly what will be uploaded:
+- **Sidebar / footer / pagination** are copied into each `.html` file, the classic Neocities way. If you add a page, add it to each sidebar and to the previous/next links.
+- **Display settings** (CRT glass, motion) and the volume are remembered with `localStorage`.
+- **Music** is synthesized in the browser with the Web Audio API. It never autoplays and stops when you leave the page.
+- **The guestbook is local to each visitor's browser**, not shared. A shared guestbook needs an external service; none has been added.
+- **Browser visits** are a local counter, not analytics.
+- No cookies, no tracking, no server.
 
-```sh
-npm run preview
-```
+## Credits
 
-## Existing behavior and credits
+The artwork, buttons, favicon, cursor, and font are linked from their original hosts, so they need those hosts to stay online. They are not copied into this project. The neighbors page keeps the source links.
 
-- The existing artwork, buttons, favicon, cursor, and font remain linked from their original external hosts. They need those hosts to remain available; they are not copied into this build. The neighbors page retains the source links.
-- Music is synthesized in the browser using Web Audio. It never autoplays and stops when you leave the music page. Volume is remembered.
-- The guestbook is intentionally **local to each visitor's browser**, not a shared public guestbook. Its notes do not leave the browser. A shared guestbook would require an external service/backend; none has been added.
-- CRT and motion settings are remembered. The OS reduced-motion preference is respected by default.
-- Browser visits are a local counter, not site analytics.
+## Notes
 
-## Checks
-
-```sh
-npm run typecheck
-npm run build
-```
-
-The production build includes the static-hosting checks in `scripts/check-build.mjs`.
+- The site works without JavaScript for reading: the sidebar, all page content, and links are plain HTML. Only the interactive extras (viewer, filters, radio, guestbook) need it.
+- Keyboard users can tab through every control; the mobile menu closes with Escape.
