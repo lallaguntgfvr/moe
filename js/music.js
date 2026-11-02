@@ -1,4 +1,6 @@
-/* midnight fm: three tiny loops made with the Web Audio API */
+/* midnight fm: three tiny loops made with the Web Audio API.
+   the radio lives in a little widget in the corner of every page, and it
+   remembers your track, your place in it, and your volume as you wander. */
 
 (function () {
   "use strict";
@@ -33,15 +35,20 @@
     }
   ];
 
-  var playButton = document.getElementById("play-toggle");
-  if (!playButton) return;
+  var widget = document.getElementById("music-widget");
+  if (!widget) return;
 
+  var panel = document.getElementById("music-widget-panel");
+  var toggleButton = document.getElementById("widget-toggle");
+  var openRadioButton = document.getElementById("open-radio");
+  var playButton = document.getElementById("play-toggle");
+  var playIcon = document.getElementById("play-icon");
+  var barTitle = document.getElementById("widget-title");
   var discWrap = document.getElementById("disc-wrap");
   var discNumber = document.getElementById("disc-number");
   var label = document.getElementById("player-label");
   var title = document.getElementById("track-title");
   var subtitle = document.getElementById("track-subtitle");
-  var playIcon = document.getElementById("play-icon");
   var previousButton = document.getElementById("previous-track");
   var nextButton = document.getElementById("next-track");
   var timeReadout = document.getElementById("time-readout");
@@ -52,11 +59,12 @@
   var volumeReadout = document.getElementById("volume-readout");
   var errorLabel = document.getElementById("player-error");
   var trackButtons = Array.prototype.slice.call(
-    document.querySelectorAll(".track-list button[data-track]")
+    document.querySelectorAll(".widget-playlist button[data-track]")
   );
 
   var trackIndex = 0;
   var isPlaying = false;
+  var wantsPlay = false; /* the visitor asked for music, even if the browser said no */
   var position = 0;
   var volume = readVolume();
   var context = null;
@@ -65,6 +73,8 @@
   var anchor = 0;
   var ticker = 0;
   var buffers = {};
+
+  /* ---------- remembered bits ---------- */
 
   function readVolume() {
     try {
@@ -85,11 +95,72 @@
     }
   }
 
+  function readRadio() {
+    var radio = { track: 0, position: 0, playing: false };
+    try {
+      var raw = sessionStorage.getItem("secret-room-radio");
+      if (!raw) return radio;
+      var parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== "object") return radio;
+      if (isFinite(parsed.track)) {
+        var index = Math.round(Number(parsed.track));
+        if (index >= 0 && index < tracks.length) radio.track = index;
+      }
+      if (isFinite(parsed.position)) {
+        var place = Number(parsed.position);
+        if (place >= 0) radio.position = place % tracks[radio.track].duration;
+      }
+      radio.playing = parsed.playing === true;
+    } catch (error) {
+      /* no memory, no problem */
+    }
+    return radio;
+  }
+
+  function storeRadio() {
+    try {
+      sessionStorage.setItem(
+        "secret-room-radio",
+        JSON.stringify({
+          track: trackIndex,
+          position: Math.round(position * 10) / 10,
+          playing: isPlaying || wantsPlay
+        })
+      );
+    } catch (error) {
+      /* the radio still plays for this page */
+    }
+  }
+
+  function readOpen() {
+    try {
+      return sessionStorage.getItem("secret-room-radio-open") === "1";
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function storeOpen(open) {
+    try {
+      sessionStorage.setItem("secret-room-radio-open", open ? "1" : "0");
+    } catch (error) {
+      /* folding still works */
+    }
+  }
+
+  /* ---------- small helpers ---------- */
+
   function formatTime(value) {
     if (!isFinite(value)) return "0:00";
     var minutes = Math.floor(value / 60);
     var seconds = Math.floor(value % 60);
     return minutes + ":" + (seconds < 10 ? "0" + seconds : seconds);
+  }
+
+  function showError(message) {
+    if (!errorLabel) return;
+    errorLabel.textContent = message;
+    errorLabel.hidden = !message;
   }
 
   function makeLoop(track) {
@@ -152,28 +223,44 @@
     }, 100);
   }
 
-  function play() {
-    if (!context) {
-      var AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContextClass) {
-        showError("audio does not work in this browser");
-        return;
-      }
+  function ensureContext() {
+    if (context) {
+      if (typeof context.resume === "function") context.resume();
+      return true;
+    }
+    var AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) {
+      showError("audio does not work in this browser");
+      return false;
+    }
+    try {
       context = new AudioContextClass();
       gain = context.createGain();
       gain.gain.value = volume;
       gain.connect(context.destination);
+    } catch (error) {
+      showError("audio could not start in this browser");
+      context = null;
+      gain = null;
+      return false;
     }
-
     if (typeof context.resume === "function") context.resume();
+    return true;
+  }
 
+  /* ---------- playing ---------- */
+
+  function play() {
+    if (!ensureContext()) return;
     if (!buffers[trackIndex]) buffers[trackIndex] = makeLoop(tracks[trackIndex]);
 
     try {
       startSource();
       isPlaying = true;
+      wantsPlay = true;
       showError("");
       render();
+      storeRadio();
     } catch (error) {
       showError("audio could not start in this browser");
       isPlaying = false;
@@ -184,14 +271,42 @@
   function pause() {
     stopSource();
     isPlaying = false;
+    wantsPlay = false;
     render();
+    storeRadio();
   }
 
-  function showError(message) {
-    if (!errorLabel) return;
-    errorLabel.textContent = message;
-    errorLabel.hidden = !message;
+  function attemptResume() {
+    if (!ensureContext()) return;
+    play();
+    /* most browsers keep a fresh page silent until a real click. if the
+       audio never started, stop pretending and wait for one. */
+    window.setTimeout(function () {
+      if (!context || !isPlaying) return;
+      if (context.state === "running") return;
+      stopSource();
+      isPlaying = false;
+      wantsPlay = true;
+      render();
+    }, 450);
   }
+
+  function selectTrack(index) {
+    var next = (index + tracks.length) % tracks.length;
+    var wasPlaying = isPlaying;
+    position = 0;
+    trackIndex = next;
+    if (wasPlaying) {
+      if (buffers[trackIndex] === undefined) {
+        buffers[trackIndex] = makeLoop(tracks[trackIndex]);
+      }
+      startSource();
+    }
+    render();
+    storeRadio();
+  }
+
+  /* ---------- drawing ---------- */
 
   function renderTime() {
     var track = tracks[trackIndex];
@@ -202,15 +317,45 @@
     if (seek) seek.value = String(Math.min(position, track.duration));
   }
 
+  function renderVolume() {
+    if (volumeSlider) volumeSlider.value = String(volume);
+    if (volumeReadout) volumeReadout.textContent = Math.round(volume * 100) + "%";
+    if (volumeIcon) volumeIcon.textContent = volume > 0 ? "♪" : "✕";
+    if (muteButton) {
+      muteButton.setAttribute(
+        "aria-label",
+        volume > 0 ? "Mute music" : "Unmute music"
+      );
+    }
+  }
+
+  function setVolume(next) {
+    volume = Math.max(0, Math.min(1, next));
+    storeVolume();
+    if (gain && context) {
+      gain.gain.setTargetAtTime(volume, context.currentTime, 0.02);
+    }
+    renderVolume();
+  }
+
   function render() {
     var track = tracks[trackIndex];
+    var number = "0" + (trackIndex + 1);
 
     if (title) title.textContent = track.title;
+    if (barTitle) barTitle.textContent = track.title;
     if (subtitle) subtitle.textContent = track.subtitle;
-    if (discNumber) discNumber.textContent = "0" + (trackIndex + 1);
-    if (label) label.textContent = "now " + (isPlaying ? "playing" : "paused");
+    if (discNumber) discNumber.textContent = number;
+    if (label) {
+      label.textContent = isPlaying
+        ? "now playing"
+        : wantsPlay
+          ? "paused · press play again"
+          : "now paused";
+    }
     if (playIcon) playIcon.textContent = isPlaying ? "❚❚" : "▶";
     playButton.setAttribute("aria-label", isPlaying ? "Pause music" : "Play music");
+    playButton.setAttribute("title", isPlaying ? "Pause music" : "Play music");
     if (discWrap) discWrap.classList.toggle("playing", isPlaying);
     if (seek) seek.max = String(track.duration);
 
@@ -224,40 +369,35 @@
     renderVolume();
   }
 
-  function renderVolume() {
-    if (volumeSlider) volumeSlider.value = String(volume);
-    if (volumeReadout) volumeReadout.textContent = Math.round(volume * 100) + "%";
-    if (volumeIcon) volumeIcon.textContent = volume > 0 ? "♪" : "✕";
-    if (muteButton) {
-      muteButton.setAttribute("aria-label", volume > 0 ? "Mute music" : "Unmute music");
+  function setOpen(open) {
+    widget.classList.toggle("is-open", open);
+    if (panel) panel.hidden = !open;
+    if (toggleButton) {
+      toggleButton.setAttribute("aria-expanded", String(open));
+      toggleButton.setAttribute("title", open ? "Fold the radio away" : "Open the radio");
     }
+    storeOpen(open);
   }
 
-  function setVolume(next) {
-    volume = Math.max(0, Math.min(1, next));
-    storeVolume();
-    if (gain && context) {
-      gain.gain.setTargetAtTime(volume, context.currentTime, 0.02);
-    }
-    renderVolume();
-  }
-
-  function selectTrack(index) {
-    var next = (index + tracks.length) % tracks.length;
-    var wasPlaying = isPlaying;
-    position = 0;
-    trackIndex = next;
-    if (wasPlaying) {
-      if (buffers[trackIndex] === undefined) buffers[trackIndex] = makeLoop(tracks[trackIndex]);
-      startSource();
-    }
-    render();
-  }
+  /* ---------- wiring ---------- */
 
   playButton.addEventListener("click", function () {
     if (isPlaying) pause();
     else play();
   });
+
+  if (toggleButton) {
+    toggleButton.addEventListener("click", function () {
+      setOpen(!widget.classList.contains("is-open"));
+    });
+  }
+
+  if (openRadioButton) {
+    openRadioButton.addEventListener("click", function () {
+      setOpen(true);
+      if (playButton) playButton.focus();
+    });
+  }
 
   if (previousButton) {
     previousButton.addEventListener("click", function () {
@@ -283,6 +423,9 @@
       if (isPlaying) startSource();
       renderTime();
     });
+    seek.addEventListener("change", function () {
+      storeRadio();
+    });
   }
 
   if (volumeSlider) {
@@ -297,10 +440,54 @@
     });
   }
 
-  window.addEventListener("pagehide", function () {
-    stopSource();
-    if (context) context.close();
+  document.addEventListener("keydown", function (event) {
+    if (event.key !== "Escape") return;
+    if (!widget.classList.contains("is-open")) return;
+    if (!widget.contains(document.activeElement)) return;
+    setOpen(false);
+    if (toggleButton) toggleButton.focus();
   });
 
+  /* ---------- carrying the radio between rooms ---------- */
+
+  window.addEventListener("pagehide", function () {
+    storeRadio();
+    stopSource();
+    if (context && typeof context.close === "function") {
+      try {
+        context.close();
+      } catch (error) {
+        /* closing is a courtesy */
+      }
+    }
+    context = null;
+    gain = null;
+  });
+
+  window.addEventListener("pageshow", function (event) {
+    if (!event.persisted) return;
+    /* the browser stashed this page before we closed the audio */
+    var wasPlaying = isPlaying;
+    stopSource();
+    isPlaying = false;
+    if (wasPlaying) wantsPlay = true;
+    render();
+    if (wantsPlay) attemptResume();
+  });
+
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "hidden") storeRadio();
+  });
+
+  /* ---------- first paint ---------- */
+
+  var remembered = readRadio();
+  trackIndex = remembered.track;
+  position = remembered.position;
+  wantsPlay = remembered.playing;
+
+  setOpen(readOpen());
   render();
+
+  if (wantsPlay) attemptResume();
 })();
