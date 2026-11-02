@@ -9,7 +9,7 @@ The violet-gray secret room, split into real, separately addressable pages. Plai
 | `index.html`     | Entrance, welcome message, and room directory           |
 | `about.html`     | Webmaster introduction, profile, and inventory          |
 | `journal.html`   | Changelog and currently card                            |
-| `music.html`     | Original browser-synth playlist and audio controls      |
+| `music.html`     | Notes on the corner radio and its three original loops  |
 | `shrine.html`    | Game recommendations, genre filters, and surprise pick  |
 | `gallery.html`   | Scrapbook and keyboard-accessible image viewer          |
 | `guestbook.html` | Private, browser-local notes                            |
@@ -20,7 +20,7 @@ Plus:
 ```text
 style.css      all of the styling
 script.js      the menu, clock, visit counter, and display settings
-js/music.js    the little Web Audio radio
+js/music.js    the little Web Audio radio in the corner (every page)
 js/shrine.js   genre filters and the surprise pick
 js/gallery.js  the image viewer
 js/guestbook.js
@@ -38,9 +38,9 @@ If you already had an older version uploaded, remove the old `assets` folder and
 
 ## How it works (for editing later)
 
-- **Sidebar / footer / pagination** are copied into each `.html` file, the classic Neocities way. If you add a page, add it to each sidebar and to the previous/next links.
+- **Sidebar / footer / corner radio** are copied into each `.html` file, the classic Neocities way. If you add a page, add it to each sidebar and paste the radio markup + script into it too.
 - **Display settings** (CRT glass, motion) and the volume are remembered with `localStorage`.
-- **Music** is synthesized in the browser with the Web Audio API. It never autoplays and stops when you leave the page.
+- **Music** is synthesized in the browser with the Web Audio API and lives in a small fixed widget in the bottom-right corner of every page. It never autoplays, sends no requests, and closes its audio when you leave a page. Your track, place, and volume are carried along in `sessionStorage`, so the widget picks up where you left off; if a browser blocks audio until a real click, press play once.
 - **The guestbook is local to each visitor's browser**, not shared. A shared guestbook needs an external service; none has been added.
 - **Browser visits** are a local counter, not analytics.
 - No cookies, no tracking, no server.
